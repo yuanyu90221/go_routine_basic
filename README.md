@@ -1,5 +1,7 @@
 # 學習golang channel跨process間的溝通
 
+## reference doc
+[go routine with channel](https://blog.wu-boy.com/2020/01/when-to-use-go-channel-and-goroutine/)
 ## 1 communicate with share memory
 舉例： 產生一個 int 的slice
 產生10個goroutine去填入資料
@@ -68,5 +70,37 @@ func main() {
 	foo := addByShareMemory(10)
 	fmt.Println(len(foo))
 	fmt.Println(foo)
+}
+```
+## 2 share by communicating
+
+作法3 建立一個只允許寫入的buffered channel, 讓10個goroutine去寫入channel
+
+然後把channel值寫入ints
+
+然後最後等到channel 的buffer size 到達10個之後在關閉channel 
+
+```golang===
+// share memory by communicate
+func addByShareCommunicate(n int) []int {
+	var ints []int
+	channel := make(chan int, n)// build a channel
+
+	for i := 0; i < n; i++ {
+		go func(channel chan<- int, order int) { // write into channel value
+			channel <- order
+		}(channel, i)
+	}
+
+	for i := range channel {
+		ints = append(ints, i)
+
+		if len(ints) == n {
+			break
+		}
+	}
+	close(channel)
+
+	return ints
 }
 ```
